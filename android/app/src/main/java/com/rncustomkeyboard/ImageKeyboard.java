@@ -8,7 +8,6 @@ import android.content.pm.PackageManager;
 import android.inputmethodservice.InputMethodService;
 import android.net.Uri;
 import android.os.Build;
-import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.RawRes;
@@ -21,11 +20,6 @@ import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputBinding;
 import android.view.inputmethod.InputConnection;
-import android.widget.Button;
-import android.widget.ImageButton;
-import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.File;
@@ -33,7 +27,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.reflect.Field;
 
 
 public class ImageKeyboard extends InputMethodService {
@@ -157,14 +150,24 @@ public class ImageKeyboard extends InputMethodService {
   }
 
 
+  public void addImage(View view) {
+    ImageKeyboard.this.doCommitContent(
+        "Android N recovery animation", MIME_TYPE_PNG, smileFile);
+  }
+
   @Override
   public void onCreate() {
     super.onCreate();
+    final File imagesDir = new File(getFilesDir(), "images");
+    imagesDir.mkdirs();
+    smileFile = getFileForResource(this, R.raw.smile, imagesDir, "smile.png");
   }
 
   @Override
   public View onCreateInputView() {
-    // On create code goes here
+
+    return getLayoutInflater().inflate(R.layout.keyboard_layout, null);
+
   }
 
   @Override
@@ -176,7 +179,13 @@ public class ImageKeyboard extends InputMethodService {
 
   @Override
   public void onStartInputView(EditorInfo info, boolean restarting) {
-    // Start code goes here
+    pngSupported = isCommitContentSupported(info, MIME_TYPE_PNG);
+
+    if(!pngSupported) {
+      Toast.makeText(getApplicationContext(),
+          "Images not supported here. Please change to another keyboard.",
+          Toast.LENGTH_SHORT).show();
+    }
   }
 
   //  Maybe call this on button click
