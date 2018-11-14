@@ -20,6 +20,9 @@ import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputBinding;
 import android.view.inputmethod.InputConnection;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import java.io.File;
@@ -27,6 +30,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Field;
 
 
 public class ImageKeyboard extends InputMethodService {
@@ -35,7 +39,7 @@ public class ImageKeyboard extends InputMethodService {
   private static final String AUTHORITY = "com.rncustomkeyboard.inputcontent";
   private static final String MIME_TYPE_PNG = "image/png";
   private boolean pngSupported;
-  private File smileFile;
+  private String[] rawFiles;
 
   private boolean isCommitContentSupported(
       @Nullable EditorInfo editorInfo, @NonNull String mimeType) {
@@ -150,23 +154,68 @@ public class ImageKeyboard extends InputMethodService {
   }
 
 
-  public void addImage(View view) {
-    ImageKeyboard.this.doCommitContent(
-        "Android N recovery animation", MIME_TYPE_PNG, smileFile);
+  /**
+   * Gets all resources names from the raw folder
+   * @return String []
+   */
+  private String[] getAllRawResources() {
+    Field fields[] = R.raw.class.getDeclaredFields() ;
+    String[] names = new String[fields.length] ;
+
+    try {
+      for( int i=0; i< fields.length; i++ ) {
+        Field f = fields[i] ;
+        names[i] = f.getName();
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+
+    return names;
   }
 
   @Override
   public void onCreate() {
     super.onCreate();
-    final File imagesDir = new File(getFilesDir(), "images");
-    imagesDir.mkdirs();
-    smileFile = getFileForResource(this, R.raw.smile, imagesDir, "smile.png");
+    rawFiles = getAllRawResources();
   }
 
   @Override
   public View onCreateInputView() {
+    final File imagesDir = new File(getFilesDir(), "images");
+    RelativeLayout KeyboardLayout = (RelativeLayout) getLayoutInflater().inflate(R.layout.keyboard_layout, null);
+    LinearLayout ImageContainer = (LinearLayout) KeyboardLayout.findViewById(R.id.imageContainer);
 
-    return getLayoutInflater().inflate(R.layout.keyboard_layout, null);
+    LinearLayout ImageContainerColumn = (LinearLayout) getLayoutInflater().inflate(R.layout.image_container_column, ImageContainer, false);
+
+    for (int i = 0; i < rawFiles.length; i++) {
+      System.out.println(i);
+      if ((i % 2) == 0) {
+        ImageContainerColumn = (LinearLayout) getLayoutInflater().inflate(R.layout.image_container_column, ImageContainer, false);
+      }
+
+      // Creating button
+      ImageButton ImgButton = (ImageButton) getLayoutInflater().inflate(R.layout.image_button, ImageContainerColumn, false);
+      ImgButton.setImageResource(getResources().getIdentifier(rawFiles[i], "raw", getPackageName()));
+      ImgButton.setTag(rawFiles[i]);
+      ImgButton.setOnClickListener(new View.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+          String emojiName = view.getTag().toString().replaceAll("_", "-");
+
+          final File file = getFileForResource(ImageKeyboard.this, getResources().getIdentifier(view.getTag().toString(), "raw", getPackageName()), imagesDir, "${view.getTag().toString()}.png");
+          ImageKeyboard.this.doCommitContent("A ${emojiName} logo", MIME_TYPE_PNG, file);
+        }
+      });
+
+      ImageContainerColumn.addView(ImgButton);
+
+      if ((i % 2) == 0) {
+        ImageContainer.addView(ImageContainerColumn);
+      }
+    }
+    return KeyboardLayout;
+
 
   }
 

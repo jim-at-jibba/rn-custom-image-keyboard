@@ -11,7 +11,7 @@ export default class App extends Component {
   }
 
   async componentWillMount() {
-    const enabled = await keyboardEnabled("keyboardName");
+    const enabled = await keyboardEnabled("com.rncustomkeyboard");
     console.log("IN APP", enabled);
     this.setState({ enabled });
   }
